@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小一模擬面試 - 聆聽測試 (簡化流程版)</title>
+    <style>
+        body { font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif; background-color: #f7f9fc; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 90%; max-width: 650px; text-align: center; }
+        h1 { color: #2c3e50; font-size: 1.8rem; margin-bottom: 1.5rem; }
+        .btn { background-color: #ff7675; color: white; border: none; padding: 15px 30px; border-radius: 50px; cursor: pointer; font-size: 1.1rem; margin: 10px; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn:hover { background-color: #d63031; transform: translateY(-2px); }
+        .btn-blue { background-color: #74b9ff; }
+        .btn-blue:hover { background-color: #0984e3; }
+        .btn:disabled { background-color: #dfe6e9; cursor: not-allowed; transform: none; }
+        .option-btn { display: block; width: 100%; margin: 12px 0; background-color: #f1f2f6; color: #2f3542; text-align: left; padding: 15px 20px; border-radius: 12px; font-weight: 500; }
+        .option-btn:hover { background-color: #dfe4ea; border-left: 5px solid #ff7675; }
+        .story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        #language-selection, #story-selection, #test-section, #quiz-section, #result-section { display: none; }
+        #language-selection { display: block; }
+        .status { font-weight: bold; color: #e67e22; margin: 20px 0; min-height: 24px; }
+        .progress { font-size: 1rem; color: #a4b0be; margin-bottom: 10px; }
+        .control-group { margin-top: 15px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="language-selection">
+    <h1>小一入學聆聽模擬測試</h1>
+    <p>請選擇測試語言：</p>
+    <button class="btn" onclick="selectLanguage('zh')">廣東話 (Cantonese)</button>
+    <button class="btn" onclick="selectLanguage('en')">English</button>
+</div>
+
+<div class="container" id="story-selection">
+    <h1 id="selection-title">請選擇故事</h1>
+    <div id="story-list" class="story-grid"></div>
+    <br>
+    <button class="btn btn-blue" onclick="goBack('language')">⬅ 返回語言選擇</button>
+</div>
+
+<div class="container" id="test-section">
+    <h2 id="story-display-name">準備聆聽</h2>
+    <div id="playback-main">
+        <button class="btn" id="play-btn" onclick="playStory()">▶ 開始播放故事</button>
+    </div>
+    <div id="playback-controls" class="control-group">
+        <button class="btn btn-blue" id="pause-btn" onclick="togglePause()">⏸ 暫停 (Pause)</button>
+        <button class="btn" style="background-color: #fab1a0; color: #d63031;" onclick="stopStory()">⏹ 停止 (Stop)</button>
+    </div>
+    <p class="status" id="speak-status"></p>
+</div>
+
+<div class="container" id="quiz-section">
+    <p class="progress" id="question-number"></p>
+    <h3 id="question-text" style="line-height: 1.6;"></h3>
+    <div id="options-container"></div>
+</div>
+
+<div class="container" id="result-section">
+    <h2>測試完成</h2>
+    <p id="final-score" style="font-size: 1.4rem; font-weight: bold; color: #2ecc71;"></p>
+    <button class="btn" onclick="location.reload()">重新開始測試</button>
+</div>
+
+<script>
+    const stories = {
+        zh: {
+            basic: [
+                {
+                    title: "故事一：小貓雨衣",
+                    content: "小貓點點今天穿了一件黃色的雨衣。他在路上遇到三隻小鴨。小鴨說他們弄丟了4個藍色皮球和2個綠色皮球。點點幫忙尋找，最後在草叢裡找回了所有藍色皮球，但綠色皮球只找回一個。點點跟小鴨說：不要緊，我們明天再找吧。小鴨聽完後變得很開心。",
+                    questions: [
+                        { q: "小貓咪點點穿了什麼顏色的衣服？", o: ["黃色", "藍色", "紅色"], a: 0 },
+                        { q: "小鴨原本弄丟了總共多少個皮球？", o: ["4個", "5個", "6個"], a: 2 },
+                        { q: "最後他們找回了多少個皮球？", o: ["4個", "5個", "6個"], a: 1 },
+                        { q: "哪一種顏色的皮球完全找回了？", o: ["綠色", "藍色", "黃色"], a: 1 },
+                        { q: "最後小鴨的心情是怎樣的？", o: ["很傷心", "很生氣", "很開心"], a: 2 }
+                    ]
+                },
+                {
+                    title: "故事二：森林野餐",
+                    content: "今天是星期六，小兔和家人去郊外野餐。媽媽帶了8件三明治，小兔吃掉2件，爸爸吃掉3件。後來下起了毛毛雨，他們趕快收拾東西躲進紅色的涼亭裡。雖然野餐縮短了，但小兔覺得躲雨的過程很有趣。",
+                    questions: [
+                        { q: "今天是星期幾？", o: ["星期五", "星期六", "星期日"], a: 1 },
+                        { q: "媽媽帶了多少件三明治？", o: ["5件", "8件", "10件"], a: 1 },
+                        { q: "三明治最後還剩下多少件？", o: ["2件", "3件", "5件"], a: 2 },
+                        { q: "他們躲進了什麼顏色的涼亭？", o: ["紅色", "藍色", "綠色"], a: 0 },
+                        { q: "為什麼野餐要提前結束？", o: ["肚子痛", "東西吃完了", "下雨了"], a: 2 }
+                    ]
+                },
+                {
+                    title: "故事三：小狗的文具盒",
+                    content: "小狗皮皮的書包裡有一個藍色的文具盒。文具盒裡面有3枝鉛筆、1把長15厘米的尺子，還有2塊白色橡皮。皮皮發現尺子斷了，於是去文具店買了一把新尺子 and 1枝原子筆。現在他的文具盒比以前多了一件物品。",
+                    questions: [
+                        { q: "皮皮的文具盒原本有多少枝鉛筆？", o: ["1枝", "2枝", "3枝"], a: 2 },
+                        { q: "文具盒裡的橡皮是什麼顏色的？", o: ["白色", "藍色", "黃色"], a: 0 },
+                        { q: "原本的尺子有多長？", o: ["10厘米", "15厘米", "20厘米"], a: 1 },
+                        { q: "皮皮在文具店買了什麼？", o: ["鉛筆和尺子", "原子筆和橡皮", "原子筆和尺子"], a: 2 },
+                        { q: "皮皮現在文具盒裡總共有幾件物品？", o: ["6件", "7件", "8件"], a: 1 }
+                    ]
+                },
+                {
+                    title: "故事四：農場的早晨",
+                    content: "農場裡住著一隻公雞、兩隻母雞和五隻小雞。每天早上，公雞會在6時準時啼叫。今天早上，母雞媽媽帶著小雞去草地吃蟲子，其中兩隻小雞跑去了左邊的籬笆，其餘的小雞跟著媽媽。農夫張先生看見了，給了牠們一碗小米。",
+                    questions: [
+                        { q: "農場裡總共有多少隻雞？", o: ["5隻", "7隻", "8隻"], a: 2 },
+                        { q: "公雞每天在什麼時間叫醒大家？", o: ["5時", "6時", "7時"], a: 1 },
+                        { q: "有多少隻小雞跟著母雞媽媽？", o: ["2隻", "3隻", "5隻"], a: 1 },
+                        { q: "小雞原本在草地做什麼？", o: ["睡覺", "吃蟲子", "玩皮球"], a: 1 },
+                        { q: "農夫張先生最後給了雞群什麼？", o: ["一碗水", "一碗小米", "一塊麵包"], a: 1 }
+                    ]
+                },
+                {
+                    title: "故事五：圖書館小插曲",
+                    content: "樂樂在圖書館看書。他的左邊坐著一位穿綠色裙子的女孩，右邊坐著一位戴眼鏡的男孩。樂樂正在看一本關於恐龍的書，這本書一共有20頁，他已經看了12頁。突然，女孩的筆掉了，樂樂幫她撿起來，女孩很有禮貌地說了聲謝謝。",
+                    questions: [
+                        { q: "樂樂左邊的女孩穿什麼顏色的裙子？", o: ["紅色", "黃色", "綠色"], a: 2 },
+                        { q: "樂樂在看什麼主題的書？", o: ["恐龍", "太空", "昆蟲"], a: 0 },
+                        { q: "這本書還有多少頁才看完？", o: ["8頁", "10頁", "12頁"], a: 0 },
+                        { q: "右邊的男孩有什麼特徵？", o: ["穿藍色衣服", "戴眼鏡", "正在睡覺"], a: 1 },
+                        { q: "故事最後發生了什麼事？", o: ["樂樂去借書", "女孩說謝謝", "老師走進來"], a: 1 }
+                    ]
+                },
+            ],
+            advanced: [
+                {
+                    title: "故事六：動物園之旅",
+                    content: "星期六上午，小明和父母一起去動物園。一進去，小明就看到一隻懶洋洋的獅子。接著他們看到長頸鹿用長脖子吃樹葉，還有大象用鼻子噴水。不遠處，幾隻猴子在樹上調皮地跳來跳去。當他們看到了可愛的企鵝和斑馬時，小明感到驚喜，因為斑馬條紋都是獨一無二的。最後小明來到海豚區，看着海豚靈活地跳躍，心裏充滿了快樂。",
+                    questions: [
+                        { q: "他們什麼時候去了動物園？", o: ["星期四", "星期一", "星期六"], a: 2 },
+                        { q: "他們首先看到的動物是什麼？", o: ["獅子", "長頸鹿", "斑馬"], a: 0 },
+                        { q: "小明跟誰去動物園？", o: ["朋友", "父母", "獅子"], a: 1 },
+                        { q: "小明覺得猴子怎麼樣？", o: ["頑皮", "安靜", "聰明"], a: 0 },
+                        { q: "小明看到了哪兩種黑白顏色的動物？", o: ["斑馬和企鵝", "斑馬和熊貓", "企鵝和熊貓"], a: 0 }
+                    ]
+                },
+                {
+                    title: "故事七：週末的選擇",
+                    content: "今天是星期六，因為是假期所以明明和詩詩決定要外出遊玩。詩詩建議一起去踢足球，但是明明說足球是戶外活動，今天天氣太熱了，不宜到戶外活動。明明建議一起去室內籃球場打籃球，但是詩詩卻反駁籃球太重，他不喜歡。最後經過討論，他們決定到圖書館，享受他們喜愛的圖書。",
+                    questions: [
+                        { q: "今天是星期幾？", o: ["星期四", "星期五", "星期六"], a: 2 },
+                        { q: "明明建議去做什麼？", o: ["打籃球", "游泳", "看圖書"], a: 0 },
+                        { q: "他們最後決定去哪裡？", o: ["球場", "足球場", "圖書館"], a: 2 },
+                        { q: "誰提議去踢足球？", o: ["明明", "詩詩", "老師"], a: 1 },
+                        { q: "故事中有多少個小朋友？", o: ["一個", "兩個", "三個"], a: 1 }
+                    ]
+                },
+                {
+                    title: "故事八：旅行的日子",
+                    content: "上星期五是陽光小學去旅行的日子，全校老師和學生一起去了動物園。明明看都大象卡卡喝水。小美看到鱷魚貝貝張開大嘴巴。詩詩看到一隻大英飛翔，目光很銳利。所有小朋友在動物園學習了很多關於動物的知識，收穫真豐富。",
+                    questions: [
+                        { q: "陽光小學在什麼時候去旅行？", o: ["星期四", "星期五", "星期六"], a: 1 },
+                        { q: "他們去了那裡？", o: ["農場", "動物園", "海洋公園"], a: 0 },
+                        { q: "卡卡和貝貝是什麼動物？", o: ["小貓和小狗", "大象和魚", "大象和鱷魚"], a: 2 },
+                        { q: "詩詩看到了什麼動物？", o: ["小鳥", "大鷹", "飛機"], a: 1 },
+                        { q: "以下那樣是沒有看到的動物？", o: ["🐘", "🐊", "🦅", "🦁"], a: 3 }
+                    ]
+                },
+ {
+                    title: "故事九：芳芳",
+                    content: "芳芳是個很懂事聰明的小孩子，他從小就學習不同的事物。芳芳從四歲開始，就會每天閱讀很多書本。芳芳五歲的時候，就開始學習彈鋼琴了。到了六歲的時候，芳芳還學習了拉小提琴。今年芳芳八歲了，他還學習了結他呢。芳芳真了不起，他的爸爸媽媽都為他感到自豪！",
+                    questions: [
+                        { q: "芳芳四歲的時候學會了什麼？", o: ["唱歌", "閱讀", "彈鋼琴", "游泳"], a: 1 },
+                        { q: "芳芳五歲的時候學會了什麼樂器?",o: ["唱歌", "閱讀", "彈鋼琴", "游泳"], a: 2 },
+                        { q: "芳芳六歲的時候學會了什麼樂器?",o: ["唱歌", "閱讀", "彈鋼琴", "小提琴"], a: 3 },
+                     	{ q: "芳芳八歲的時候學會了什麼樂器?",o: ["唱歌", "結他", "彈鋼琴", "小提琴"], a: 1 },
+                        { q: "芳芳一共會彈奏多少種樂器？", o: ["2", "3", "4", "5"], a: 1 },
+			{ q: "芳芳十分了不起，他令到爸爸媽媽感到怎樣？", o: ["自豪", "信心", "傷心", "懶惰"], a: 0 }
+                    ]
+                }
+
+            ],
+
+        },
+        en: {
+            basic: [
+                {
+                    title: "Story 1: Shopping Trip",
+                    content: "Peter went to the supermarket with his mother. They bought 6 red apples and 4 green pears. At the checkout, Peter saw a toy car that cost 10 dollars, but he only had 5 dollars. His mother said, 'If you help with housework, I will give you the rest.' Peter promised to help.",
+                    questions: [
+                        { q: "Who did Peter go with?", o: ["Father", "Mother", "Friend"], a: 1 },
+                        { q: "How many fruits in total?", o: ["6", "10", "12"], a: 1 },
+                        { q: "How much more money does Peter need?", o: ["5 dollars", "10 dollars", "1 dollar"], a: 0 },
+                        { q: "What fruit was green?", o: ["Apples", "Pears", "Grapes"], a: 1 },
+                        { q: "What was Peter's promise?", o: ["To study hard", "To do housework", "To sleep early"], a: 1 }
+                    ]
+                },
+                {
+                    title: "Story 2: The Magic Garden",
+                    content: "In a magic garden, there are 4 purple flowers on the left and 5 orange flowers on the right. A small bee flew to the garden. It visited all the purple flowers first, then it visited 2 orange flowers. The bee was very busy but happy to find so much honey.",
+                    questions: [
+                        { q: "How many purple flowers are there?", o: ["4", "5", "9"], a: 0 },
+                        { q: "Where are the orange flowers located?", o: ["On the left", "On the right", "In the middle"], a: 1 },
+                        { q: "How many flowers did the bee visit in total?", o: ["4", "6", "9"], a: 1 },
+                        { q: "What color were the flowers on the left?", o: ["Orange", "Purple", "Red"], a: 1 },
+                        { q: "How did the bee feel?", o: ["Tired", "Sad", "Happy"], a: 2 }
+                    ]
+                },
+                {
+                    title: "Story 3: Tim's New Bicycle",
+                    content: "Tim got a new blue bicycle for his 6th birthday. He rode it to the park with his big brother, Leo. Leo is 9 years old. They raced to the big fountain. Tim was fast, but Leo was faster and reached the fountain first. They both had a great time.",
+                    questions: [
+                        { q: "How old is Tim?", o: ["6 years old", "9 years old", "10 years old"], a: 0 },
+                        { q: "What color is Tim's bicycle?", o: ["Red", "Blue", "Green"], a: 1 },
+                        { q: "What is the name of Tim's brother?", o: ["Leo", "Tom", "Sam"], a: 0 },
+                        { q: "Who won the race?", o: ["Tim", "Leo", "The bird"], a: 1 },
+                        { q: "What was the target of the race?", o: ["The park gate", "The big fountain", "The toy shop"], a: 1 }
+                    ]
+                },
+                {
+                    title: "Story 4: A Rainy Afternoon",
+                    content: "It started to rain at 3 o'clock in the afternoon. Sally was at home. She put on her pink boots and took a yellow umbrella. She went out to see her grandma. Grandma gave Sally 3 cookies. Sally ate 1 and kept the others for her little sister, May.",
+                    questions: [
+                        { q: "What time did it start to rain?", o: ["2 o'clock", "3 o'clock", "4 o'clock"], a: 1 },
+                        { q: "What color were Sally's boots?", o: ["Yellow", "Pink", "Blue"], a: 1 },
+                        { q: "How many cookies did Grandma give Sally?", o: ["1", "2", "3"], a: 2 },
+                        { q: "How many cookies did Sally keep for May?", o: ["1", "2", "3"], a: 1 },
+                        { q: "Who is May?", o: ["Sally's friend", "Sally's sister", "Sally's grandma"], a: 1 }
+                    ]
+                },
+ {
+                    title: "Story 5: A Day at the Zoo",
+                    content: "Last Sunday, Ben went to the zoo with his family. He saw a big elephant eating grass and two tall giraffes. Ben's favorite animal was the monkey because it was very funny. He bought a red balloon and an ice cream. It was a sunny and happy day.",
+                    questions: [
+                        { q: "When did Ben go to the zoo?", o: ["Last Saturday", "Last Sunday", "Last Friday"], a: 1 },
+                        { q: "What was the elephant doing?", o: ["Sleeping", "Drinking water", "Eating grass"], a: 2 },
+                        { q: "Which animal was Ben's favorite?", o: ["The giraffe", "The elephant", "The monkey"], a: 2 },
+                        { q: "What color was the balloon?", o: ["Blue", "Red", "Yellow"], a: 1 },
+                        { q: "How was the weather?", o: ["Rainy", "Cloudy", "Sunny"], a: 2 }
+                    ]
+                },
+                {
+                    title: "Story 6: My New School Bag",
+                    content: "Lily has a new school bag. It is pink and purple. Inside the bag, there are three pencils, a long ruler, and an orange notebook. Lily lost her eraser at school yesterday, so her father bought her a new one shaped like a star. She likes her new bag very much.",
+                    questions: [
+                        { q: "What color is Lily's school bag?", o: ["Pink and purple", "Blue and green", "Red and white"], a: 0 },
+                        { q: "How many pencils are in the bag?", o: ["Two", "Three", "Four"], a: 1 },
+                        { q: "What color is the notebook?", o: ["Orange", "Yellow", "Pink"], a: 0 },
+                        { q: "What shape is the new eraser?", o: ["Circle", "Square", "Star"], a: 2 },
+                        { q: "Who bought the new eraser for Lily?", o: ["Her mother", "Her father", "Her teacher"], a: 1 }
+                    ]
+                },
+                {
+                    title: "Story 7: A Surprise Party",
+                    content: "It was Tom's birthday yesterday. His mother made a big chocolate cake with seven candles. His friends, Sam and May, came to his house at four o'clock. They gave Tom a blue robot and a storybook. They played games and sang songs together in the living room.",
+                    questions: [
+                        { q: "What kind of cake did Tom have?", o: ["Fruit cake", "Chocolate cake", "Cheese cake"], a: 1 },
+                        { q: "How many candles were on the cake?", o: ["Five", "Six", "Seven"], a: 2 },
+                        { q: "What time did Tom's friends arrive?", o: ["3 o'clock", "4 o'clock", "5 o'clock"], a: 1 },
+                        { q: "What did the friends give Tom?", o: ["A robot and a book", "A ball and a car", "A kite and a puzzle"], a: 0 },
+                        { q: "Where did they play games?", o: ["In the garden", "In the bedroom", "In the living room"], a: 2 }
+                    ]
+                },
+                {
+                    title: "Story 8: The Hungry Rabbit",
+                    content: "A white rabbit lives in a small garden. He is very hungry. He looks for food under the big tree. He finds two carrots and three apples. A small bird flies down and says, 'Can I have an apple?' The kind rabbit says, 'Yes, let's eat together!'",
+                    questions: [
+                        { q: "Where does the rabbit live?", o: ["In a forest", "In a garden", "In a house"], a: 1 },
+                        { q: "What color is the rabbit?", o: ["Brown", "Grey", "White"], a: 2 },
+                        { q: "How many carrots did the rabbit find?", o: ["Two", "Three", "Four"], a: 0 },
+                        { q: "Which animal flies down to talk to the rabbit?", o: ["A cat", "A bird", "A bee"], a: 1 },
+                        { q: "Is the rabbit kind or mean?", o: ["Kind", "Mean", "Angry"], a: 0 }
+                    ]
+                },
+                {
+                    title: "Story 9: At the Beach",
+                    content: "It is a hot summer day. Kim and her brother are at the beach. Kim is wearing a blue swimsuit and a straw hat. Her brother is swimming in the sea. They see a small crab on the sand. Kim's brother catches a big fish, and they decide to have a barbecue for dinner.",
+                    questions: [
+                        { q: "How is the weather?", o: ["Cold", "Windy", "Hot"], a: 2 },
+                        { q: "What is Kim wearing on her head?", o: ["A cap", "A straw hat", "A headband"], a: 1 },
+                        { q: "What did they see on the sand?", o: ["A shell", "A crab", "A jellyfish"], a: 1 },
+                        { q: "What did Kim's brother catch?", o: ["A fish", "A bird", "A turtle"], a: 0 },
+                        { q: "What will they have for dinner?", o: ["Pizza", "Sandwiches", "Barbecue"], a: 2 }
+                    ]
+                }
+
+            ],
+            advanced: []
+        }
+    };
+
+    let currentLanguage = '';
+    let currentStoryList = [];
+    let currentStory = null;
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let isPaused = false;
+
+    // 直接跳轉到故事列表
+    function selectLanguage(lang) {
+        currentLanguage = lang;
+        showSection('story-selection');
+        renderStoryList();
+    }
+
+    // 合併 Basic 和 Advanced 故事顯示
+    function renderStoryList() {
+        const listContainer = document.getElementById('story-list');
+        listContainer.innerHTML = '';
+        
+        // 合併該語言下所有清單
+        currentStoryList = [
+            ...stories[currentLanguage].basic,
+            ...stories[currentLanguage].advanced
+        ];
+        
+        currentStoryList.forEach((story, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.style.width = '100%';
+            btn.innerText = story.title;
+            btn.onclick = () => startTest(index);
+            listContainer.appendChild(btn);
+        });
+    }
+
+    function startTest(index) {
+        currentStory = currentStoryList[index];
+        currentQuestionIndex = 0;
+        score = 0;
+        isPaused = false;
+        showSection('test-section');
+        document.getElementById('story-display-name').innerText = currentStory.title;
+        resetPlaybackUI();
+    }
+
+    function showSection(id) {
+        window.speechSynthesis.cancel();
+        const sections = ['language-selection', 'story-selection', 'test-section', 'quiz-section', 'result-section'];
+        sections.forEach(s => document.getElementById(s).style.display = 'none');
+        document.getElementById(id).style.display = 'block';
+    }
+
+    function goBack(to) {
+        if (to === 'language') showSection('language-selection');
+    }
+
+    function resetPlaybackUI() {
+        document.getElementById('play-btn').style.display = 'inline-block';
+        document.getElementById('playback-controls').style.display = 'none';
+        document.getElementById('pause-btn').innerText = "⏸ 暫停 (Pause)";
+        document.getElementById('speak-status').innerText = '';
+    }
+
+    function getFemaleVoice(langCode) {
+        const voices = window.speechSynthesis.getVoices();
+        return voices.find(v => v.lang.includes(langCode) && (v.name.includes('Female') || v.name.includes('Apple') || v.name.includes('Sinji') || v.name.includes('Tracy'))) || voices.find(v => v.lang.includes(langCode));
+    }
+
+    function playStory() {
+        const status = document.getElementById('speak-status');
+        document.getElementById('play-btn').style.display = 'none';
+        document.getElementById('playback-controls').style.display = 'block';
+        status.innerText = "老師正在讀故事，請細心聆聽...";
+
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(currentStory.content);
+        const langTag = currentLanguage === 'zh' ? 'zh-HK' : 'en-US';
+        utterance.lang = langTag;
+        utterance.rate = 0.85;
+        utterance.pitch = 1.1;
+        utterance.voice = getFemaleVoice(langTag);
+
+        utterance.onend = () => {
+            if (!isPaused && document.getElementById('test-section').style.display === 'block') {
+                status.innerText = "播放完畢";
+                setTimeout(() => showSection('quiz-section'), 800);
+                loadQuestion();
+            }
+        };
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function togglePause() {
+        const pauseBtn = document.getElementById('pause-btn');
+        const status = document.getElementById('speak-status');
+
+        if (!isPaused) {
+            window.speechSynthesis.pause();
+            isPaused = true;
+            pauseBtn.innerText = "▶ 繼續 (Resume)";
+            status.innerText = "暫停中...";
+        } else {
+            window.speechSynthesis.resume();
+            isPaused = false;
+            pauseBtn.innerText = "⏸ 暫停 (Pause)";
+            status.innerText = "老師正在讀故事...";
+        }
+    }
+
+    function stopStory() {
+        window.speechSynthesis.cancel();
+        isPaused = false;
+        resetPlaybackUI();
+        document.getElementById('speak-status').innerText = "已停止播放。";
+    }
+
+    function loadQuestion() {
+        const qData = currentStory.questions[currentQuestionIndex];
+        document.getElementById('question-number').innerText = `問題 ${currentQuestionIndex + 1} / ${currentStory.questions.length}`;
+        document.getElementById('question-text').innerText = qData.q;
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        qData.o.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => {
+                if (index === qData.a) score++;
+                currentQuestionIndex++;
+                if (currentQuestionIndex < currentStory.questions.length) loadQuestion();
+                else showResult();
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    function showResult() {
+        showSection('result-section');
+        document.getElementById('final-score').innerText = `表現評分：${score} / ${currentStory.questions.length}`;
+    }
+
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+</script>
+
+</body>
+</html>
