@@ -63,6 +63,15 @@
     <button class="btn" onclick="location.reload()">重新開始測試</button>
 </div>
 
+<div class="container" id="result-section">
+    <h2>測試完成</h2>
+    <p id="final-score" style="font-size: 1.4rem; font-weight: bold; color: #2ecc71;"></p>
+    
+    <div id="record-list" style="margin: 20px 0; max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px;"></div>
+    
+    <button class="btn" onclick="location.reload()">重新開始測試</button>
+</div>
+
 <script>
     const stories = {
         zh: {
@@ -286,6 +295,7 @@
     let currentQuestionIndex = 0;
     let score = 0;
     let isPaused = false;
+let userAnswers = []; 
 
     // 直接跳轉到故事列表
     function selectLanguage(lang) {
@@ -316,14 +326,15 @@
     }
 
     function startTest(index) {
-        currentStory = currentStoryList[index];
-        currentQuestionIndex = 0;
-        score = 0;
-        isPaused = false;
-        showSection('test-section');
-        document.getElementById('story-display-name').innerText = currentStory.title;
-        resetPlaybackUI();
-    }
+    currentStory = currentStoryList[index];
+    currentQuestionIndex = 0;
+    score = 0;
+    userAnswers = []; // 重置紀錄
+    isPaused = false;
+    showSection('test-section');
+    document.getElementById('story-display-name').innerText = currentStory.title;
+    resetPlaybackUI();
+}
 
     function showSection(id) {
         window.speechSynthesis.cancel();
@@ -399,30 +410,86 @@
     }
 
     function loadQuestion() {
-        const qData = currentStory.questions[currentQuestionIndex];
-        document.getElementById('question-number').innerText = `問題 ${currentQuestionIndex + 1} / ${currentStory.questions.length}`;
-        document.getElementById('question-text').innerText = qData.q;
-        const container = document.getElementById('options-container');
-        container.innerHTML = '';
-        qData.o.forEach((opt, index) => {
-            const btn = document.createElement('button');
-            btn.className = 'btn option-btn';
-            btn.innerText = opt;
-            btn.onclick = () => {
-                if (index === qData.a) score++;
-                currentQuestionIndex++;
-                if (currentQuestionIndex < currentStory.questions.length) loadQuestion();
-                else showResult();
-            };
-            container.appendChild(btn);
-        });
+    const qData = currentStory.questions[currentQuestionIndex];
+    document.getElementById('question-number').innerText = `問題 ${currentQuestionIndex + 1} / ${currentStory.questions.length}`;
+    document.getElementById('question-text').innerText = qData.q;
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+
+    qData.o.forEach((opt, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn option-btn';
+        btn.innerText = opt;
+        btn.onclick = () => handleAnswer(index, btn); // 改用 handleAnswer 處理
+        container.appendChild(btn);
+    });
+}
+
+// 新增：處理答案點擊，顯示對錯
+function handleAnswer(selectedIndex, clickedBtn) {
+    const qData = currentStory.questions[currentQuestionIndex];
+    const allBtns = document.querySelectorAll('.option-btn');
+    
+    // 禁用所有按鈕防止重複點擊
+    allBtns.forEach(b => b.style.pointerEvents = 'none');
+
+    const isCorrect = (selectedIndex === qData.a);
+    
+    // 儲存紀錄
+    userAnswers.push({
+        question: qData.q,
+        options: qData.o,
+        selected: selectedIndex,
+        correct: qData.a,
+        isCorrect: isCorrect
+    });
+
+    if (isCorrect) {
+        score++;
+        clickedBtn.style.backgroundColor = "#55efc4"; // 正確色 (淺綠)
+        clickedBtn.innerHTML += " ✅";
+    } else {
+        clickedBtn.style.backgroundColor = "#ff7675"; // 錯誤色 (淺紅)
+        clickedBtn.innerHTML += " ❌";
+        // 顯示正確答案
+        allBtns[qData.a].style.border = "3px solid #2ecc71";
     }
 
-    function showResult() {
-        showSection('result-section');
-        document.getElementById('final-score').innerText = `表現評分：${score} / ${currentStory.questions.length}`;
-    }
+    // 延遲 1 秒後進入下一題或顯示結果
+    setTimeout(() => {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < currentStory.questions.length) {
+            loadQuestion();
+        } else {
+            showResult();
+        }
+    }, 1200);
+}
 
+function showResult() {
+    showSection('result-section');
+    document.getElementById('final-score').innerText = `最終得分：${score} / ${currentStory.questions.length}`;
+    
+    const recordContainer = document.getElementById('record-list');
+    recordContainer.innerHTML = '<h3>作答紀錄：</h3>';
+    
+    userAnswers.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.style.textAlign = 'left';
+        div.style.padding = '10px';
+        div.style.margin = '10px 0';
+        div.style.borderRadius = '8px';
+        div.style.backgroundColor = item.isCorrect ? '#f0fff4' : '#fff5f5';
+        div.style.borderLeft = item.isCorrect ? '5px solid #2ecc71' : '5px solid #ff7675';
+        
+        div.innerHTML = `
+            <strong>Q${i+1}: ${item.question}</strong><br>
+            您的答案: <span style="color:${item.isCorrect ? 'green' : 'red'}">${item.options[item.selected]}</span><br>
+            ${item.isCorrect ? '' : `正確答案: <span style="color:green">${item.options[item.correct]}</span>`}
+        `;
+        recordContainer.appendChild(div);
+    });
+}
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 </script>
 
